@@ -1,0 +1,15 @@
+.toolbar[b-jv49t6sol8] {
+  margin-bottom: 10px;
+}
+
+.editor[b-jv49t6sol8] {
+  border: 1px solid #ccc;
+  padding: 100px 700px;
+  min-height: 200px;
+  display: inline-block;
+}
+
+textarea[b-jv49t6sol8] {
+  width: 100%;
+  margin-top: 10px;
+}

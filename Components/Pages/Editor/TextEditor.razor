@@ -1,0 +1,359 @@
+@namespace blazorwebtexteditor.Components.Pages.Editor
+@page "/texteditor"
+@rendermode InteractiveServer
+
+<style>
+    .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 10px;
+        background-color: #f0f0f0;
+        border: 1px solid #ccc;
+        margin-bottom: 20px;
+    }
+
+    .editor {
+        border: 1px solid #ccc;
+        padding: 10px;
+        min-height: 200px;
+        overflow-y: auto;
+    }
+
+    .editor span {
+        cursor: pointer;
+        display: inline-block;
+    }
+
+    .editor span:hover {
+        background-color: #e0e0e0;
+    }
+</style>
+
+<div class="toolbar" @onclick="@OnClickOutside">
+    <button @onclick="ToggleBold" disabled="@IsActionButtonDisabled">Bold</button>
+    <button @onclick="ToggleItalic" disabled="@IsActionButtonDisabled">Italic</button>
+    <button @onclick="ToggleUnderline" disabled="@IsActionButtonDisabled">Underline</button>
+    <button @onclick="Delete" disabled="@IsActionButtonDisabled">Delete All</button>
+    <button @onclick="RemoveSelectedWord" disabled="@IsActionButtonDisabled">Delete Word</button>
+    
+    <label>Text Size: 
+        <input type="number" min="10" max="72" @bind="selectedSegment.FontSizePx" disabled="@IsActionButtonDisabled" /> px
+    </label>
+    
+    <label>Font: 
+        <select @bind="selectedSegment.FontFamily" disabled="@IsActionButtonDisabled">
+            <option value="Arial">Arial</option>
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Courier New">Courier New</option>
+        </select>
+    </label>
+    
+    <label>Text Color: 
+        <input type="color" @bind="selectedSegment.TextColor" disabled="@IsActionButtonDisabled" />
+    </label>
+
+    <label>
+        <input type="checkbox" @bind="addOnNewLine" /> New Line
+        <span>@(addOnNewLine ? "Add New Line" : "Add Same Line")</span>
+    </label>
+</div>
+
+<div class="editor">
+   @foreach (var segment in textSegments)
+{
+    <span style="@segment.GetStyle()" @ondblclick="() => SelectSegment(segment)">
+        @foreach (var word in segment.Text.Split(' '))
+        {
+            <span @onclick="() => SelectWord(segment, word)" style="@GetWordStyle(segment, word)">
+                @word
+            </span>
+            @if (word != segment.Text.Split(' ').Last())
+            {
+                <span>&nbsp;</span> <!-- Add space between words -->
+            }
+        }
+    </span>
+    
+    @if (segment.IsNewLine) // Check if this segment should start a new line
+    {
+        <br /> <!-- Add a line break for new line segments -->
+    }
+}
+</div>
+
+<textarea @bind="newSegmentText" placeholder="Enter text here..." @onclick="@OnClickOutside"></textarea>
+<button @onclick="AddSegment">Add Text</button>
+
+@if (isEditing)
+{
+    <div>
+        <h3>Editing Segment: @selectedSegment.Text</h3>
+        <textarea @bind="editingText" placeholder="Edit text here..."></textarea>
+        <button @onclick="SaveEditedSegment">Save</button>
+        <button @onclick="CancelEdit">Cancel</button>
+    </div>
+}
+
+@code {
+    private List<TextSegment> textSegments = new List<TextSegment>();
+    private TextSegment selectedSegment = new TextSegment(); // Always initialized to avoid null
+    private string newSegmentText;
+    private string selectedWord; // New field to track selected word
+    private string editingText; // New field for editing the selected word
+    private bool isEditing = false; // New state for tracking editing
+    private bool addOnNewLine = false; // New field to determine line addition
+
+
+    private void OnClickOutside()
+    {
+        if (isEditing)
+        {
+            SaveEditedSegment(); // Save the edited segment when clicking outside
+        }
+    }
+
+    private void AddSegment()
+    {
+        if (!string.IsNullOrWhiteSpace(newSegmentText))
+        {
+            // Capture the current state of addOnNewLine directly
+            bool currentNewLineState = addOnNewLine;
+
+            var newSegment = new TextSegment
+            {
+                Text = newSegmentText,
+                IsBold = selectedSegment.IsBold,
+                IsItalic = selectedSegment.IsItalic,
+                IsUnderline = selectedSegment.IsUnderline,
+                FontSizePx = selectedSegment.FontSizePx,
+                FontFamily = selectedSegment.FontFamily,
+                TextColor = selectedSegment.TextColor,
+                IsNewLine = currentNewLineState // Use the current state
+            };
+
+            // If we are adding on a new line, ensure the previous segment is marked accordingly
+            if (currentNewLineState && textSegments.Count > 0)
+            {
+                textSegments[^1].IsNewLine = true; // Set the last segment to new line before adding
+            }
+
+            if (!currentNewLineState && textSegments.Count > 0)
+            {
+                // If not adding a new line, append to the last segment's text
+                var lastSegment = textSegments[^1];
+                lastSegment.Text += " " + newSegment.Text; // Append the new text to the last segment
+            }
+            else
+            {
+                // If it's a new line or the first segment, add normally
+                textSegments.Add(newSegment);
+                Console.WriteLine($"Added new segment: {newSegment.Text}"); // Log addition
+            }
+
+            newSegmentText = string.Empty; // Clear input after adding
+            StateHasChanged(); // Update UI after adding
+        }
+        else
+        {
+            Console.WriteLine("Attempted to add an empty segment."); // Log attempt to add empty
+        }
+    }
+
+    private void SelectWord(TextSegment segment, string word)
+    {
+        // Log the selected word to the console
+        Console.WriteLine($"Selected word: {word} from segment: {segment.Text}");
+
+        // Select the segment and the specific word to edit
+        selectedSegment = segment;
+        selectedWord = word;
+        editingText = word; // Pre-fill editing text with the selected word
+        isEditing = true; // Enable editing for the selected word
+    }
+
+    private void SelectSegment(TextSegment segment)
+    {
+        // Log the selected segment to the console
+        Console.WriteLine($"Selected segment for editing: {segment.Text}");
+
+        // Select the segment for editing
+        selectedSegment = segment;
+        editingText = segment.Text; // Pre-fill editing text with the entire segment's text
+        isEditing = true; // Enable editing for the selected segment
+    }
+
+   private string GetWordStyle(TextSegment segment, string word)
+{
+    var style = selectedSegment == segment && selectedWord == word 
+                ? "background-color: yellow;" 
+                : "";
+
+    if (segment.IsUnderline) // Check if the segment is underlined
+    {
+        style += "text-decoration: underline;"; // Add underline style
+    }
+
+    return style; // Return the combined style
+}
+
+    private void CancelEdit()
+    {
+        // Reset editing state
+        Console.WriteLine($"Edit canceled for segment: {selectedSegment.Text}"); // Log cancellation
+        selectedSegment = new TextSegment(); // Reinitialize to avoid null
+        isEditing = false; // Reset editing state
+        StateHasChanged(); // Update UI
+    }
+
+    <!-- private void Delete()
+    {
+        if (selectedSegment != null)
+        {
+            // Log the type of deletion being performed
+            Console.WriteLine($"Deleting all segment: {selectedSegment.Text}");
+            textSegments.Remove(selectedSegment);
+            selectedSegment = new TextSegment(); // Reinitialize to avoid null
+            isEditing = false; // Reset editing state
+            StateHasChanged(); // Update UI
+        }
+        else
+        {
+            Console.WriteLine("Attempted to delete a segment but none is selected.");
+        }
+    } -->
+
+
+   public bool IsActionButtonDisabled => selectedSegment == null;
+
+
+    private void ToggleBold()
+    {
+        if (selectedSegment != null)
+        {
+            selectedSegment.IsBold = !selectedSegment.IsBold;
+            Console.WriteLine($"Toggled bold for segment: {selectedSegment.Text}. Now bold: {selectedSegment.IsBold}"); // Log toggle
+            StateHasChanged(); // Ensure UI updates
+        }
+    }
+
+    private void ToggleItalic()
+    {
+        if (selectedSegment != null)
+        {
+            selectedSegment.IsItalic = !selectedSegment.IsItalic;
+            Console.WriteLine($"Toggled italic for segment: {selectedSegment.Text}. Now italic: {selectedSegment.IsItalic}"); // Log toggle
+            StateHasChanged(); // Ensure UI updates
+        }
+    }
+
+    private void ToggleUnderline()
+    {
+        if (selectedSegment != null)
+        {
+            selectedSegment.IsUnderline = !selectedSegment.IsUnderline;
+            Console.WriteLine($"Toggled underline for segment: {selectedSegment.Text}. Now underline: {selectedSegment.IsUnderline}"); // Log toggle
+            StateHasChanged(); // Ensure UI updates
+        }
+    }
+
+    private void SaveEditedSegment()
+    {
+        if (!string.IsNullOrWhiteSpace(editingText))
+        {
+            // Kontrollera om redigeringen gäller ett enda ord
+            var editingTextWords = editingText.Trim().Split(' ');
+            
+            if (editingTextWords.Length == 1 && !string.IsNullOrWhiteSpace(selectedWord))
+            {
+                // Logga för att visa att vi redigerar ett enskilt ord
+                Console.WriteLine($"Editing a single word: '{selectedWord}'");
+
+                // Gamla logiken för att ersätta ett enskilt ord
+                var words = selectedSegment.Text.Split(' ').ToList();
+                var index = words.IndexOf(selectedWord);
+
+                if (index != -1)
+                {
+                    words[index] = editingText; // Byt ut det valda ordet
+                    selectedSegment.Text = string.Join(" ", words);
+                    Console.WriteLine($"Replaced word '{selectedWord}' with '{editingText}' in segment."); // Logga ersättningen
+                }
+                else
+                {
+                    Console.WriteLine("Selected word not found in segment text."); // Logga inte funnen text
+                }
+            }
+            else
+            {
+                // Logga att vi redigerar en hel sektion
+                Console.WriteLine($"Editing entire segment: {selectedSegment.Text}");
+                selectedSegment.Text = editingText; // Spara redigeringen
+            }
+
+            // Återställ val och redigering
+            selectedSegment = new TextSegment(); // Reinitialize to avoid null
+            editingText = string.Empty; // Clear editing text
+            isEditing = false; // Disable editing state
+            StateHasChanged(); // Update UI
+        }
+        else
+        {
+            Console.WriteLine("Attempted to save empty editing text."); // Logga tom text
+        }
+    }
+
+
+ <!-- private void Delete()
+    {
+        if (selectedSegment != null)
+        {
+            // Log the type of deletion being performed
+            Console.WriteLine($"Deleting all segment: {selectedSegment.Text}");
+            textSegments.Remove(selectedSegment);
+            selectedSegment = new TextSegment(); // Reinitialize to avoid null
+            isEditing = false; // Reset editing state
+            StateHasChanged(); // Update UI
+        }
+        else
+        {
+            Console.WriteLine("Attempted to delete a segment but none is selected.");
+        }
+    } -->
+
+ private void Delete()
+    {
+        if (selectedSegment != null)
+        {
+            // Log the type of deletion being performed
+            Console.WriteLine($"Deleting all segment: {selectedSegment.Text}");
+            textSegments.Remove(selectedSegment);
+            selectedSegment = new TextSegment(); // Reinitialize to avoid null
+            isEditing = false; // Reset editing state
+            StateHasChanged(); // Update UI
+        }
+        else
+        {
+            Console.WriteLine("Attempted to delete a segment but none is selected.");
+        }
+    }
+
+private void RemoveSelectedWord()
+{
+    if (selectedSegment != null && !string.IsNullOrWhiteSpace(selectedWord))
+    {
+        Console.WriteLine($"Removing word: {selectedWord} from segment: {selectedSegment.Text}");
+        selectedSegment.RemoveWord(selectedWord);
+        selectedWord = string.Empty;
+        StateHasChanged(); // Uppdatera UI
+    }
+    else
+    {
+        Console.WriteLine("Attempted to remove a word but no segment or word is selected.");
+    }
+}
+
+
+
+
+}
