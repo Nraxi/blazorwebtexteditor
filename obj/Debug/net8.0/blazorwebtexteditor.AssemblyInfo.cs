@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("blazorwebtexteditor")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e925cb159868e95d7fcd5166ef746a1e38ae0bcc")]
 [assembly: System.Reflection.AssemblyProductAttribute("blazorwebtexteditor")]
 [assembly: System.Reflection.AssemblyTitleAttribute("blazorwebtexteditor")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

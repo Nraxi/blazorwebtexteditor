@@ -28,3 +28,4 @@
 /Volumes/Disk 2 Projects/Alla projekt/zocom/LIAarbete/blazorwebtexteditor/obj/Debug/net8.0/blazorwebtexteditor.pdb
 /Volumes/Disk 2 Projects/Alla projekt/zocom/LIAarbete/blazorwebtexteditor/obj/Debug/net8.0/blazorwebtexteditor.genruntimeconfig.cache
 /Volumes/Disk 2 Projects/Alla projekt/zocom/LIAarbete/blazorwebtexteditor/obj/Debug/net8.0/ref/blazorwebtexteditor.dll
+/Volumes/Disk 2 Projects/Alla projekt/zocom/LIAarbete/blazorwebtexteditor/obj/Debug/net8.0/blazorwebtexteditor.sourcelink.json
